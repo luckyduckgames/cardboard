@@ -141,12 +141,19 @@ class CardboardInputProvider {
 };
 
 std::unique_ptr<CardboardInputProvider> cardboard_input_provider;
+IUnityXRInputInterface *unity_xr_input_interface{nullptr};
+IUnityXRTrace *unity_xr_trace{nullptr};
 }  // anonymous namespace
 
 /// Callback executed when a subsystem should initialize in preparation for
 /// becoming active.
 static UnitySubsystemErrorCode UNITY_INTERFACE_API
 LifecycleInitialize(UnitySubsystemHandle handle, void* data) {
+  if (!cardboard_input_provider) {
+    cardboard_input_provider.reset(
+        new CardboardInputProvider(unity_xr_trace, unity_xr_input_interface));
+  }
+
   CARDBOARD_INPUT_XR_TRACE_LOG(cardboard_input_provider->GetTrace(),
                                "Lifecycle initialized");
 
@@ -208,15 +215,16 @@ LifecycleInitialize(UnitySubsystemHandle handle, void* data) {
 }
 
 UnitySubsystemErrorCode LoadInput(IUnityInterfaces* xr_interfaces) {
-  auto* input = xr_interfaces->Get<IUnityXRInputInterface>();
-  if (input == NULL) {
+  unity_xr_input_interface = xr_interfaces->Get<IUnityXRInputInterface>();
+  if (unity_xr_input_interface == NULL) {
     return kUnitySubsystemErrorCodeFailure;
   }
-  auto* trace = xr_interfaces->Get<IUnityXRTrace>();
-  if (trace == NULL) {
+  unity_xr_trace = xr_interfaces->Get<IUnityXRTrace>();
+  if (unity_xr_trace == NULL) {
     return kUnitySubsystemErrorCodeFailure;
   }
-  cardboard_input_provider.reset(new CardboardInputProvider(trace, input));
+  cardboard_input_provider.reset(
+      new CardboardInputProvider(unity_xr_trace, unity_xr_input_interface));
 
   UnityLifecycleProvider input_lifecycle_handler;
   input_lifecycle_handler.userData = NULL;
@@ -232,6 +240,6 @@ UnitySubsystemErrorCode LoadInput(IUnityInterfaces* xr_interfaces) {
                                  "Lifecycle finished");
     cardboard_input_provider.reset();
   };
-  return input->RegisterLifecycleProvider("Cardboard", "Input",
-                                          &input_lifecycle_handler);
+  return unity_xr_input_interface->RegisterLifecycleProvider(
+      "Cardboard", "Input", &input_lifecycle_handler);
 }

@@ -234,6 +234,8 @@ class CardboardDisplayProvider {
 };
 
 std::unique_ptr<CardboardDisplayProvider> display_provider;
+IUnityXRDisplayInterface* unity_xr_display_interface{nullptr};
+IUnityXRTrace* unity_xr_trace{nullptr};
 
 }  // namespace
 
@@ -246,7 +248,11 @@ std::unique_ptr<CardboardDisplayProvider> display_provider;
 /// @return kUnitySubsystemErrorCodeSuccess when the registration is successful.
 ///         Otherwise, a value in UnitySubsystemErrorCode flagging the error.
 static UnitySubsystemErrorCode UNITY_INTERFACE_API
-DisplayInitialize(UnitySubsystemHandle handle, void*) {
+DisplayInitialize(UnitySubsystemHandle handle, void *) {
+  if (!display_provider) {
+    display_provider.reset(new CardboardDisplayProvider(
+        unity_xr_trace, unity_xr_display_interface));
+  }
   display_provider->SetHandle(handle);
 
   // Register for callbacks on the graphics thread.
@@ -291,15 +297,14 @@ DisplayInitialize(UnitySubsystemHandle handle, void*) {
 /// @return kUnitySubsystemErrorCodeSuccess when the registration is successful.
 ///         Otherwise, a value in UnitySubsystemErrorCode flagging the error.
 UnitySubsystemErrorCode LoadDisplay(IUnityInterfaces* xr_interfaces) {
-  auto* display = xr_interfaces->Get<IUnityXRDisplayInterface>();
-  if (display == NULL) {
+  unity_xr_display_interface = xr_interfaces->Get<IUnityXRDisplayInterface>();
+  if (unity_xr_display_interface == NULL) {
     return kUnitySubsystemErrorCodeFailure;
   }
-  auto* trace = xr_interfaces->Get<IUnityXRTrace>();
-  if (trace == NULL) {
+  unity_xr_trace = xr_interfaces->Get<IUnityXRTrace>();
+  if (unity_xr_trace == NULL) {
     return kUnitySubsystemErrorCodeFailure;
   }
-  display_provider.reset(new CardboardDisplayProvider(trace, display));
 
   UnityLifecycleProvider display_lifecycle_handler;
   display_lifecycle_handler.userData = NULL;
@@ -316,6 +321,6 @@ UnitySubsystemErrorCode LoadDisplay(IUnityInterfaces* xr_interfaces) {
     display_provider.reset();
   };
 
-  return display_provider->GetDisplay()->RegisterLifecycleProvider(
+  return unity_xr_display_interface->RegisterLifecycleProvider(
       "Cardboard", "Display", &display_lifecycle_handler);
 }
