@@ -634,6 +634,7 @@
 					"$(SRCROOT)",
 					"$(PROJECT_DIR)/../proto",
 					"$(PROJECT_DIR)/../third_party/libprotobuf/ios/include",
+					"$(PROJECT_DIR)/../third_party/unity_plugin_api",
 				);
 				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../third_party/libprotobuf/ios/lib";
 				OTHER_LDFLAGS = "-ObjC";
